@@ -22,15 +22,12 @@ pip install -r requirements.txt
 
 ## Data
 
-To get processed dataset, run notebooks in folder `data_processing/` for each raw dataset. The folder for processed datasets have two directories: `Feature/` and `Label/`.  
-The folder `Feature/` contains file named in format `feature_ID.npy` files for all the patients.  
-Each`feature_ID.npy` file contains trials belongs to the same patient and stacked into a 3-D array with shape [N, T, D], where N denotes # of trials, T denotes the timestamps for a trial, and C denotes the feature dimensions. 
-The folder `Label/` has a file with name `label.npy`. This label file is a 2-D array with shape [N, 2], where N also denotes the # of patients.  
-The first column is the label, and the second column is the patient ID, ranging from 1 to N. Finally, you can put processed dataset into `datasets/` folder in the following way:
+To get processed dataset, run notebooks in folder `data_processing/` for each raw dataset. The folder for processed datasets have two directories: `Feature/` and `Label/`. The folder `Feature/` contains file named in format `feature_ID.npy` files for all the patients. Each`feature_ID.npy` file contains trials belongs to the same patient and stacked into a 3-D array with shape [N, T, D], where N denotes # of trials, T denotes the timestamps for a trial, and C denotes the feature dimensions. 
+The folder `Label/` has a file with name `label.npy`. This label file is a 2-D array with shape [N, 2], where N also denotes the # of patients. The first column is the label, and the second column is the patient ID, ranging from 1 to N. Finally, you can put processed dataset into `datasets/` folder in the following way:
 
-* [AD dataset](https://osf.io/jbysn/) should be put into `datasets/AD/` so that each patient file can be located by `datasets/AD/Feature/feature_ID.npy`, and the label file can be located by `datasets/AD/Label/label.npy`.
-* [PTB dataset](https://physionet.org/content/ptbdb/1.0.0/) should be put into `datasets/PTB/` so that each patient file can be located by `datasets/PTB/Feature/feature_ID.npy`, and the label file can be located by `datasets/PTB/Label/label.npy`.
-* [TDBrain dataset](https://brainclinics.com/resources/) should be put into `datasets/TDBrain/` so that each patient file can be located by `datasets/TDBrain/Feature/feature_ID.npy`, and the label file can be located by `datasets/TDBrain/Label/label.npy`.
+* [AD dataset](https://osf.io/jbysn/) comprises EEG recordings from 12 patients with Alzheimer’s disease and 13 healthy controls. The processed data should be put into `datasets/AD/` so that each patient file can be located by `datasets/AD/Feature/feature_ID.npy`, and the label file can be located by `datasets/AD/Label/label.npy`.
+* [PTB dataset](https://physionet.org/content/ptbdb/1.0.0/) consists of ECG recordings from 290 patients, with 15 channels sampled at 1000 Hz. The processed data should be put into `datasets/PTB/` so that each patient file can be located by `datasets/PTB/Feature/feature_ID.npy`, and the label file can be located by `datasets/PTB/Label/label.npy`.
+* [TDBrain dataset](https://brainclinics.com/resources/) is a large dataset that monitors the brain signals of 1274 patients with 33 channels(500 Hz) during EC (Eye closed) and EO (Eye open) tasks. The processed data should be put into `datasets/TDBrain/` so that each patient file can be located by `datasets/TDBrain/Feature/feature_ID.npy`, and the label file can be located by `datasets/TDBrain/Label/label.npy`.
 
 
 ## Usage
