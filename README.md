@@ -3,7 +3,7 @@
 
 ## Requirements
 
-The recommended requirements for TS2Vec are specified as follows:
+The recommended requirements are specified as follows:
 * Python 3.10
 * Jupyter Notebook
 * scikit-learn==1.2.1  
