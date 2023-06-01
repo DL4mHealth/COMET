@@ -32,7 +32,7 @@ The folder `Label/` has a file with name `label.npy`. This label file is a 2-D a
 
 ## Usage
 
-We provide jupyter notebook example for each dataset. To train and evaluate COMET on a dataset, simply run DatasetName_example.ipynb, such as AD_example.ipynb. 
+We provide jupyter notebook example for each dataset. To train and evaluate COMET on a dataset, simply run `DatasetName_example.ipynb`, such as `AD_example.ipynb`. 
 All the setups including pre-training, partial fine-tuning, full fine-tuning, and semi fine-tuning are running step by step with command in the notebook.
 
 After training and evaluation, the pre-training model and fine-tuning model can be found in`test_run/DatasetName/`; and the logging file for validation and test results can be found in  `logging/DatasetName/`. 
