@@ -33,7 +33,7 @@ The folder `Label/` has a file with name `label.npy`. This label file is a 2-D a
 
 ## Experimental setups
 
-We evaluate our model in three different settings: partial fine-tuning, full fine-tuning, and semi-supervised learning via fine-tuning, and in comparison with 5 state-of-the-art methods: [TS2vec](https://github.com/yuezhihan/ts2vec), [Mixing-up](https://github.com/Wickstrom/MixupContrastiveLearning), [TS-TCC](https://github.com/emadeldeen24/TS-TCC), [SimCLR](https://github.com/iantangc/ContrastiveLearningHAR), and [TF-C](https://github.com/mims-harvard/TFC-pretraining). We add two additional baselines trained without any pre-training: Non-DL a non-deep learning logistic regression model) and Random Init. (randomly nitializes the fine-tuning odel). 
+We evaluate our model in three different settings: partial fine-tuning, full fine-tuning, and semi-supervised learning via fine-tuning, and in comparison with 5 state-of-the-art methods: [TS2vec](https://github.com/yuezhihan/ts2vec), [Mixing-up](https://github.com/Wickstrom/MixupContrastiveLearning), [TS-TCC](https://github.com/emadeldeen24/TS-TCC), [SimCLR](https://github.com/iantangc/ContrastiveLearningHAR), and [TF-C](https://github.com/mims-harvard/TFC-pretraining). We add two additional baselines trained without any pre-training: Non-DL a non-deep learning logistic regression model) and Random Init. (randomly initializes the fine-tuning model). 
 
 **Setting 1: Partial fine-tuning.** We add a logistic regression classifier $L$ on top of the pre-trained encoder $G$. The training process utilizes 100% labeled training data for sample classification. Notably, the parameters of the encoder $G$ are frozen during training, ensuring that only the classifier $L$ is fine-tuned.
 

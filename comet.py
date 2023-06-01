@@ -15,7 +15,7 @@ from sklearn.preprocessing import LabelBinarizer
 
 
 class COMET:
-    '''The TS2Vec model'''
+    '''The COMET model'''
     
     def __init__(
         self,
@@ -32,7 +32,7 @@ class COMET:
         after_iter_callback=None,
         after_epoch_callback=None
     ):
-        ''' Initialize a TS2Vec model.
+        ''' Initialize a COMET model.
         
         Args:
             input_dims (int): The input dimension. For a univariate time series, this should be set to 1.
@@ -80,7 +80,7 @@ class COMET:
         self.finetune_n_iters = 0
     
     def fit(self, trial_train_data, trial_train_labels, sample_data_length=256, overlapping=0.0, masks=None, factors=None, n_epochs=None, n_iters=None, verbose=True):
-        ''' Training the TS2Vec model.
+        ''' Training the COMET model.
         
         Args:
             trial_train_data (numpy.ndarray): The trial-level training data. It should have a shape of (n_trials, n_timestamps, n_features). All missing data should be set to NaN.
