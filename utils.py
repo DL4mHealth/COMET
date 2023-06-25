@@ -8,11 +8,16 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.utils import shuffle
 from scipy.signal import butter, lfilter, filtfilt
+import itertools
 from itertools import repeat
 import sys
+from torch.utils.data import BatchSampler
 
 
 class Logger(object):
+    """ A Logger for saving output of printings between functions start_logging() and stop_logging().
+
+    """
     def __init__(self, filename="Default.log"):
         self.terminal = sys.stdout
         self.log = open(filename, "a")
@@ -35,65 +40,163 @@ def stop_logging():
     sys.stdout = sys.__stdout__
 
 
-def split_data_label(data, labels, sub_length, overlapping):
-    ''' split a batch of time-series trials into shorter samples and adding trial ids to the labels
+class MyBatchSampler(BatchSampler):
+    """ A custom BatchSampler to shuffle the samples within each batch.
+        It changes the local order of samples(samples in the same batch) per epoch,
+        which does not break too much the distribution of pre-shuffle samples by function shuffle_feature_label().
+        The goal is to shuffle the samples per epoch but make sure that there are samples from the same trial in a batch.
+
+    """
+    def __init__(self, sampler, batch_size, drop_last):
+        super().__init__(sampler, batch_size, drop_last)
+
+    def __iter__(self):
+        batch = []
+        for idx in self.sampler:
+            batch.append(idx)
+            if len(batch) == self.batch_size:
+                random.shuffle(batch)
+                yield batch
+                batch = []
+        if len(batch) > 0 and not self.drop_last:
+            random.shuffle(batch)
+            yield batch
+
+
+def shuffle_feature_label(X, y, trial_shuffle=True, batch_size=128):
+    """ Call shuffle functions.
+        The goal is to guarantee that there are samples from the same trial in a batch,
+        while avoiding all the samples are from the same trial/patient (low diversity).
 
     Args:
-        data (numpy.ndarray): It should have a shape of (n_trials, n_timestamps, n_features) B x T x C
-        labels (numpy.ndarray): It should have a shape of (n_trials, 2). The first column is the label and the second column is patient ID.
-        sub_length (int): The length for sample-level data.
-        overlapping (float): How many overlapping for each sample-level data in a trial
+        trial_shuffle (bool): to do trial or batch shuffle
+        batch_size (int): batch_size if apply batch shuffle
+    """
+
+    # do trial shuffle
+    if trial_shuffle:
+        return trial_shuffle_feature_label(X, y)
+
+    # do batch shuffle
+    else:
+        return batch_shuffle_feature_label(X, y, batch_size)
+
+
+def trial_shuffle_feature_label(X, y):
+    """ shuffle each samples in a trial first, then shuffle the order of trials
+
+    """
+
+    # sort X, y by trial ID
+    sorted_indices = np.argsort(y[:, 2], axis=0)
+    # concatenate sorted indices and labels
+    sorted_indices_labels = np.concatenate((sorted_indices.reshape(-1, 1), y[sorted_indices]), axis=1).astype(int)
+    trials_list = []
+    # group each trial by trial ID
+    for _, trial in itertools.groupby(sorted_indices_labels, lambda x: x[3]):
+        trial = list(trial)
+        # shuffle each sample in a trial
+        trial = shuffle(trial, random_state=42)
+        trials_list.append(trial)
+    # shuffle the order of trials
+    shuffled_trials_list = shuffle(trials_list, random_state=42)
+    shuffled_trials = np.concatenate(shuffled_trials_list, axis=0)
+    # get the sorted indices
+    shuffled_sorted_indices = shuffled_trials[:, 0]
+    X_shuffled = X[shuffled_sorted_indices]
+    y_shuffled = y[shuffled_sorted_indices]
+    return X_shuffled, y_shuffled
+
+
+def batch_shuffle_feature_label(X, y, batch_size=128):
+    """ shuffle the order of batches first, then shuffle the samples in the batch
+
+    """
+
+    # sort X, y by trial ID
+    sorted_indices = np.argsort(y[:, 2], axis=0)
+    sorted_indices_list = np.array_split(sorted_indices, y.shape[0]/batch_size)
+    # shuffle the batches
+    sorted_indices_list = shuffle(sorted_indices_list, random_state=42)
+    # shuffle samples in the batch
+    shuffled_sorted_indices_list = []
+    for batch in sorted_indices_list:
+        shuffled_batch = shuffle(batch, random_state=42)
+        shuffled_sorted_indices_list.append(shuffled_batch)
+    shuffled_sorted_indices = np.concatenate(shuffled_sorted_indices_list, axis=0)
+    X_shuffled = X[shuffled_sorted_indices]
+    y_shuffled = y[shuffled_sorted_indices]
+    return X_shuffled, y_shuffled
+
+
+def split_data_label(X_trial, y_trial, sample_timestamps, overlapping):
+    """ split a batch of time-series trials into samples and adding trial ids to the label array y
+
+    Args:
+        X_trial (numpy.ndarray): It should have a shape of (n_trials, trial_timestamps, features) B_trial x T_trial x C.
+        y_trial (numpy.ndarray): It should have a shape of (n_trials, 2). The first column is the label and the second column is patient id.
+        sample_timestamps (int): The length for sample-level data (T_sample).
+        overlapping (float): How many overlapping for each sample-level data in a trial.
 
     Returns:
-        sample_data (numpy.ndarray): B_sub x T_sub x C. B_sub = B x segments_num
-        sample_labels (numpy.ndarray): B_sub x 3. (label, patient id, trial id)
-    '''
-    sample_data, trial_ids, sample_num = split_data(data, sub_length, overlapping)
+        X_sample (numpy.ndarray): It should have a shape of (n_samples, sample_timestamps, features) B_sample x T_sample x C. The B_sample = B x sample_num.
+        y_sample (numpy.ndarray): It should have a shape of (n_samples, 3). The three columns are the label, patient id, and trial id.
+    """
+    X_sample, trial_ids, sample_num = split_data(X_trial, sample_timestamps, overlapping)
     # all samples from same trial should have same label and patient id
-    sample_labels = np.repeat(labels, repeats=sample_num, axis=0)
+    y_sample = np.repeat(y_trial, repeats=sample_num, axis=0)
     # append trial ids. Segments split from same trial should have same trial ids
-    label_num = sample_labels.shape[0]
-    sample_labels = np.hstack((sample_labels.reshape((label_num, -1)), trial_ids.reshape((label_num, -1))))
-    sample_data, sample_labels = shuffle(sample_data, sample_labels, random_state=42)
-    return sample_data, sample_labels
+    label_num = y_sample.shape[0]
+    y_sample = np.hstack((y_sample.reshape((label_num, -1)), trial_ids.reshape((label_num, -1))))
+    X_sample, y_sample = shuffle(X_sample, y_sample, random_state=42)
+    return X_sample, y_sample
 
 
-def split_data(data, sub_length=256, overlapping=0.5):
-    ''' split a batch of time-series into shorter samples and mark their trial ids
+def split_data(X_trial, sample_timestamps=256, overlapping=0.5):
+    """ split a batch of trials into samples and mark their trial ids
+
+    Args:
+        See split_data_label() function
+
     Returns:
-        sample_data (numpy.ndarray): (n_samples, n_sub_timestamps, n_features). n_samples = n_trials x sample_num
+        X_sample (numpy.ndarray): (n_samples, sample_timestamps, feature).
         trial_ids (numpy.ndarray): (n_samples,)
         sample_num (int): one trial splits into sample_num of samples
-    '''
-    length = data.shape[1]
+    """
+    length = X_trial.shape[1]
     # check if sub_length and overlapping compatible
     if overlapping:
-        assert (length - (1-overlapping)*sub_length) % (sub_length*overlapping) == 0
-        sample_num = (length - (1 - overlapping) * sub_length) / (sub_length * overlapping)
+        assert (length - (1-overlapping)*sample_timestamps) % (sample_timestamps*overlapping) == 0
+        sample_num = (length - (1 - overlapping) * sample_timestamps) / (sample_timestamps * overlapping)
     else:
-        assert length % sub_length == 0
-        sample_num = length / sub_length
+        assert length % sample_timestamps == 0
+        sample_num = length / sample_timestamps
     sample_feature_list = []
     trial_id_list = []
     trial_id = 1
-    for trial in data:
+    for trial in X_trial:
         counter = 0
-        # split one trial(5s, 1280 timestamps) into 9 half overlapping samples (1s, 256 timestamps)
-        while counter*sub_length*(1-overlapping)+sub_length <= trial.shape[0]:
-            sample_feature = trial[int(counter*sub_length*(1-overlapping)):int(counter*sub_length*(1-overlapping)+sub_length)]
+        # ex. split one trial(5s, 1280 timestamps) into 9 half-overlapping samples (1s, 256 timestamps)
+        while counter*sample_timestamps*(1-overlapping)+sample_timestamps <= trial.shape[0]:
+            sample_feature = trial[int(counter*sample_timestamps*(1-overlapping)):int(counter*sample_timestamps*(1-overlapping)+sample_timestamps)]
             # print(f"{int(counter*length*(1-overlapping))}:{int(counter*length*(1-overlapping)+length)}")
             sample_feature_list.append(sample_feature)
             trial_id_list.append(trial_id)
             counter += 1
         trial_id += 1
-    sample_data, trial_ids = np.array(sample_feature_list), np.array(trial_id_list)
+    X_sample, trial_ids = np.array(sample_feature_list), np.array(trial_id_list)
 
-    return sample_data, trial_ids, sample_num
+    return X_sample, trial_ids, sample_num
 
 
-# t: time interval
-# data: time-series data in shape TxF. T is time sequence and F is feature\channel.
 def plot_channels(t, data):
+    """ plot a time-series sample
+
+    Args:
+        t (float): The time range (in second) on x axis.
+        data (numpy.ndarray): The plot time-series in shape (timestamps, feature).
+    """
+
     data = data.reshape(data.shape[0], -1)
     timestamps = np.arange(0, t, t/data.shape[0])
     plt.figure(figsize=(12, 8))
@@ -112,151 +215,63 @@ def butter_bandpass(lowcut, highcut, fs, order=5):
 
 
 def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
+    """ seed https://stackoverflow.com/questions/12093594/how-to-implement-band-pass-butterworth-filter-with-scipy-signal-butter
+
+    """
     b, a = butter_bandpass(lowcut, highcut, fs, order=order)
     y = lfilter(b, a, data, axis=0)
-    # y = filtfilt(b, a, data, axis=0)
     return y
 
 
-# trial(numpy.ndarray): Shape in timestamps x channels
-def process_trial(trial, normalized=True, bandpass_filter=False):
+def process_ts(ts, fs, normalized=True, bandpass_filter=False):
+    """ preprocess a time-series data
+
+    Args:
+        ts (numpy.ndarray): The input time-series in shape (timestamps, feature).
+        fs (float): The sampling frequency for bandpass filtering.
+        normalized (bool): Whether to normalize the time-series data.
+        bandpass_filter (bool): Whether to filter the time-series data.
+
+    Returns:
+        ts (numpy.ndarray): The processed time-series.
+    """
+
     if bandpass_filter:
-        trial = butter_bandpass_filter(trial, 0.5, 50, 256, 5)
+        ts = butter_bandpass_filter(ts, 0.5, 50, fs, 5)
     if normalized:
         scaler = StandardScaler()
-        scaler.fit(trial)
-        trial = scaler.transform(trial)
-    return trial
+        scaler.fit(ts)
+        ts = scaler.transform(ts)
+    return ts
 
 
-# batch(numpy.ndarray): Shape in batch x timestamps x channels
-def process_batch_trial(batch, normalized=True, bandpass_filter=False):
-    bool_iterator_1 = repeat(normalized, len(batch))
-    bool_iterator_2 = repeat(bandpass_filter, len(batch))
-    return np.array(list(map(process_trial, batch, bool_iterator_1, bool_iterator_2)))
+def process_batch_ts(batch, fs=256, normalized=True, bandpass_filter=False):
+    """ preprocess a batch of time-series data
+
+    Args:
+        batch (numpy.ndarray): A batch of input time-series in shape (n_samples, timestamps, feature).
+
+    Returns:
+        A batch of processed time-series.
+    """
+
+    bool_iterator_1 = repeat(fs, len(batch))
+    bool_iterator_2 = repeat(normalized, len(batch))
+    bool_iterator_3 = repeat(bandpass_filter, len(batch))
+    return np.array(list(map(process_ts, batch, bool_iterator_1, bool_iterator_2, bool_iterator_3)))
 
 
-def pkl_save(name, var):
-    with open(name, 'wb') as f:
-        pickle.dump(var, f)
-
-
-def pkl_load(name):
-    with open(name, 'rb') as f:
-        return pickle.load(f)
-
-
-def torch_pad_nan(arr, left=0, right=0, dim=0):
-    if left > 0:
-        padshape = list(arr.shape)
-        padshape[dim] = left
-        arr = torch.cat((torch.full(padshape, np.nan), arr), dim=dim)
-    if right > 0:
-        padshape = list(arr.shape)
-        padshape[dim] = right
-        arr = torch.cat((arr, torch.full(padshape, np.nan)), dim=dim)
-    return arr
-
-
-def pad_nan_to_target(array, target_length, axis=0, both_side=False):
-    assert array.dtype in [np.float16, np.float32, np.float64]
-    pad_size = target_length - array.shape[axis]
-    if pad_size <= 0:
-        return array
-    npad = [(0, 0)] * array.ndim
-    if both_side:
-        npad[axis] = (pad_size // 2, pad_size - pad_size//2)
-    else:
-        npad[axis] = (0, pad_size)
-    return np.pad(array, pad_width=npad, mode='constant', constant_values=np.nan)
-
-def split_with_nan(x, sections, axis=0):
-    assert x.dtype in [np.float16, np.float32, np.float64]
-    arrs = np.array_split(x, sections, axis=axis)
-    target_length = arrs[0].shape[axis]
-    for i in range(len(arrs)):
-        arrs[i] = pad_nan_to_target(arrs[i], target_length, axis=axis)
-    return arrs
-
-def take_per_row(A, indx, num_elem):
-    all_indx = indx[:, None] + np.arange(num_elem)
-    return A[torch.arange(all_indx.shape[0])[:, None], all_indx]
-
-def centerize_vary_length_series(x):
-    prefix_zeros = np.argmax(~np.isnan(x).all(axis=-1), axis=1)
-    suffix_zeros = np.argmax(~np.isnan(x[:, ::-1]).all(axis=-1), axis=1)
-    offset = (prefix_zeros + suffix_zeros) // 2 - prefix_zeros
-    rows, column_indices = np.ogrid[:x.shape[0], :x.shape[1]]
-    offset[offset < 0] += x.shape[1]
-    column_indices = column_indices - offset[:, np.newaxis]
-    return x[rows, column_indices]
-
-def data_dropout(arr, p):
-    B, T = arr.shape[0], arr.shape[1]
-    mask = np.full(B*T, False, dtype=np.bool)
-    ele_sel = np.random.choice(
-        B*T,
-        size=int(B*T*p),
-        replace=False
-    )
-    mask[ele_sel] = True
-    res = arr.copy()
-    res[mask.reshape(B, T)] = np.nan
-    return res
-
-def name_with_datetime(prefix='default'):
-    now = datetime.now()
-    return prefix + '_' + now.strftime("%Y%m%d_%H%M%S")
-
-def init_dl_program(
-    device_name,
-    seed=None,
-    use_cudnn=True,
-    deterministic=False,
-    benchmark=False,
-    use_tf32=False,
-    max_threads=None
-):
-    import torch
-    if max_threads is not None:
-        torch.set_num_threads(max_threads)  # intraop
-        if torch.get_num_interop_threads() != max_threads:
-            torch.set_num_interop_threads(max_threads)  # interop
-        try:
-            import mkl
-        except:
-            pass
-        else:
-            mkl.set_num_threads(max_threads)
-        
-    if seed is not None:
-        random.seed(seed)
-        seed += 1
-        np.random.seed(seed)
-        seed += 1
-        torch.manual_seed(seed)
-        
-    if isinstance(device_name, (str, int)):
-        device_name = [device_name]
-    
-    devices = []
-    for t in reversed(device_name):
-        t_device = torch.device(t)
-        devices.append(t_device)
-        if t_device.type == 'cuda':
-            assert torch.cuda.is_available()
-            torch.cuda.set_device(t_device)
-            if seed is not None:
-                seed += 1
-                torch.cuda.manual_seed(seed)
-    devices.reverse()
-    torch.backends.cudnn.enabled = use_cudnn
-    torch.backends.cudnn.deterministic = deterministic
-    torch.backends.cudnn.benchmark = benchmark
-    
-    if hasattr(torch.backends.cudnn, 'allow_tf32'):
-        torch.backends.cudnn.allow_tf32 = use_tf32
-        torch.backends.cuda.matmul.allow_tf32 = use_tf32
-        
-    return devices if len(devices) > 1 else devices[0]
+def seed_everything(seed=42):
+    """
+    Seed everything.
+    """
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    # training is extremely slow when do following setting
+    # torch.backends.cudnn.benchmark = False
+    # torch.backends.cudnn.deterministic = True
 

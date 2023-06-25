@@ -1,14 +1,12 @@
 from sklearn.utils import shuffle
 import numpy as np
 import os
-from sklearn.model_selection import train_test_split
 
 
-def load_tdbrain(train_ids, val_ids, test_ids, data_path, label_path):
-    ''' load tdbrain data
+def load_ad(val_ids, test_ids, data_path, label_path):
+    """ load AD data
 
     Args:
-        train_ids (list): list of ids for training set
         val_ids (list): list of ids for validation set
         test_ids (list): list of ids for test set
         data_path (str): path for data directory
@@ -16,7 +14,7 @@ def load_tdbrain(train_ids, val_ids, test_ids, data_path, label_path):
 
     Returns:
         X_train, X_val, X_test, y_train, y_val, y_test
-    '''
+    """
     train_trial_feature_list = []
     train_trial_label_list = []
     val_trial_feature_list = []
@@ -47,7 +45,7 @@ def load_tdbrain(train_ids, val_ids, test_ids, data_path, label_path):
                 test_trial_feature_list.append(trial_feature)
                 test_trial_label_list.append(trial_label)
             # training set
-            elif j+1 in train_ids:
+            else:
                 train_trial_feature_list.append(trial_feature)
                 train_trial_label_list.append(trial_label)
     # reshape and shuffle
@@ -62,42 +60,4 @@ def load_tdbrain(train_ids, val_ids, test_ids, data_path, label_path):
     X_test, y_test = shuffle(X_test, y_test, random_state=42)
 
     return X_train, X_val, X_test, y_train, y_val, y_test
-
-
-"""def load_tdbrain(drop_ids, data_path, label_path):
-    ''' load tdbrain data
-    Args:
-        drop_ids (list): id for subjects we drop
-        data_path (str): path for data directory
-        label_path (str): path for label file
-
-    Returns:
-        X_train, X_val, X_test, y_train, y_val, y_test
-    '''
-    trial_feature_list = []
-    trial_label_list = []
-    filenames = []
-    # The first column is the label; the second column is the patient ID
-    subject_label = np.load(label_path)
-    for filename in os.listdir(data_path):
-        filenames.append(filename)
-    filenames.sort()
-    for j in range(len(filenames)):
-        # drop some healthy subjects to keep balance
-        if j+1 in drop_ids:
-            continue
-        # print(j)
-        trial_label = subject_label[j]
-        path = data_path + filenames[j]
-        subject_feature = np.load(path)
-        for trial_feature in subject_feature:
-            trial_feature_list.append(trial_feature)
-            trial_label_list.append(trial_label)
-
-    # 60 : 20 : 20
-    X_train, y_train = np.array(trial_feature_list), np.array(trial_label_list)
-    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
-    X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.25, random_state=42)
-
-    return X_train, X_val, X_test, y_train, y_val, y_test"""
 

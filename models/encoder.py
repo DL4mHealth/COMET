@@ -60,26 +60,51 @@ class ProjectionHead(nn.Module):
         return torch.sigmoid(x)
 
 
-class TSEncoder(nn.Module):
+class FTClassifier(nn.Module):
+    def __init__(self, input_dims, output_dims, depth, p_output_dims, hidden_dims=64, p_hidden_dims=128):
+        super().__init__()
+        self.input_dims = input_dims  # Ci
+        self.output_dims = output_dims  # Co
+        self.hidden_dims = hidden_dims  # Ch
+        self.p_hidden_dims = p_hidden_dims  # Cph
+        self.p_output_dims = p_output_dims  # Cp
+        self._net = TCNEncoder(input_dims=input_dims, output_dims=output_dims, hidden_dims=hidden_dims, depth=depth)
+        self.net = torch.optim.swa_utils.AveragedModel(self._net)
+        self.net.update_parameters(self._net)
+        # projection head for finetune
+        self.proj_head = ProjectionHead(
+            output_dims,
+            p_output_dims,
+            p_hidden_dims,
+        )
+
+    def forward(self, x):
+        out = self.net(x)  # B x T x Co
+        out = F.max_pool1d(
+            out.transpose(1, 2),
+            kernel_size=out.size(1),
+        ).transpose(1, 2)  # B x 1 x Co
+        out = out.squeeze(1)  # B x Co
+        x = self.proj_head(out)  # B x Cp
+        return torch.sigmoid(x)
+
+
+class TCNEncoder(nn.Module):
     def __init__(self, input_dims, output_dims, hidden_dims=64, depth=10, mask_mode='binomial'):
         super().__init__()
-        self.input_dims = input_dims
-        self.output_dims = output_dims
-        self.hidden_dims = hidden_dims
+        self.input_dims = input_dims  # Ci
+        self.output_dims = output_dims  # Co
+        self.hidden_dims = hidden_dims  # Ch
         self.mask_mode = mask_mode
         self.input_fc = nn.Linear(input_dims, hidden_dims)
         self.feature_extractor = DilatedConvEncoder(
             hidden_dims,
-            # input_dims,
             [hidden_dims] * depth + [output_dims],  # a list here
             kernel_size=3
         )
         self.repr_dropout = nn.Dropout(p=0.1)
         
-    def forward(self, x, mask=None):  # x: B x T x Ch (input_dims)
-        # ~ works as operator.invert
-        # nan_mask = ~x.isnan().any(axis=-1)
-        # x[~nan_mask] = 0
+    def forward(self, x, mask=None):  # input dimension : B x T x Ci
         x = self.input_fc(x)  # B x T x Ch (hidden_dims)
         
         # generate & apply mask, default is binomial
@@ -106,7 +131,8 @@ class TSEncoder(nn.Module):
             mask = x.new_full((x.size(0), x.size(1)), True, dtype=torch.bool)
             mask[:, -1] = False
 
-        # mask &= nan_mask
+        # mask &= nan_masK
+        # ~ works as operator.invert
         x[~mask] = 0
 
         # conv encoder

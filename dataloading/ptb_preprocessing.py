@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split
 
 
 def load_ptb(train_ids, val_ids, test_ids, data_path, label_path):
-    ''' load ptb data
+    """ load ptb data
 
     Args:
         train_ids (list): list of ids for training set
@@ -16,7 +16,7 @@ def load_ptb(train_ids, val_ids, test_ids, data_path, label_path):
 
     Returns:
         X_train, X_val, X_test, y_train, y_val, y_test
-    '''
+    """
     train_trial_feature_list = []
     train_trial_label_list = []
     val_trial_feature_list = []

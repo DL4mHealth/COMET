@@ -1,2 +1,2 @@
-from .encoder import TSEncoder
+from .encoder import TCNEncoder
 from .encoder import ProjectionHead

@@ -124,11 +124,15 @@ def id_contrastive_loss(z1, z2, id):
         loss += loss_triu  # technically need to add 1 more term for symmetry
         loss_terms += 1
 
+    # down triangle same patient combs exist
     if len(rows2) > 0:
         tril_elements = sim_matrix_exp[rows2, cols2]  # row and column for down triangle same patient combinations
         loss_tril = -torch.mean(torch.log(tril_elements / tril_sum[cols2]))
         loss += loss_tril  # technically need to add 1 more term for symmetry
         loss_terms += 1
 
-    loss = loss/loss_terms
-    return loss
+    if loss_terms == 0:
+        return 0
+    else:
+        loss = loss/loss_terms
+        return loss
