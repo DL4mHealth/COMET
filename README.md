@@ -41,7 +41,7 @@ The folder `Label/` has a file with the name `label.npy`. This label file is a 2
 
 ## Experimental setups
 
-We evaluate our model in three different settings: partial fine-tuning and full fine-tuning, and in comparison with six state-of-the-art methods: [TS2vec](https://github.com/yuezhihan/ts2vec), [Mixing-up](https://github.com/Wickstrom/MixupContrastiveLearning), [TS-TCC](https://github.com/emadeldeen24/TS-TCC), [SimCLR](https://github.com/iantangc/ContrastiveLearningHAR), [CLOCS](https://github.com/danikiyasseh/CLOCS) and [TF-C](https://github.com/mims-harvard/TFC-pretraining).
+We evaluate our model with patient-independent train-val-test split in two settings: partial fine-tuning and full fine-tuning, and in comparison with six state-of-the-art methods: [TS2vec](https://github.com/yuezhihan/ts2vec), [Mixing-up](https://github.com/Wickstrom/MixupContrastiveLearning), [TS-TCC](https://github.com/emadeldeen24/TS-TCC), [SimCLR](https://github.com/iantangc/ContrastiveLearningHAR), [CLOCS](https://github.com/danikiyasseh/CLOCS) and [TF-C](https://github.com/mims-harvard/TFC-pretraining).
 
 **Setting 1: Partial fine-tuning.** We add a logistic regression classifier $L$ on top of the pre-trained encoder $G$. The training process utilizes 100% labeled training data for sample classification. Notably, the parameters of the encoder $G$ are frozen during training, ensuring that only the classifier $L$ is fine-tuned.
 
