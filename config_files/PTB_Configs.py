@@ -13,11 +13,15 @@ class Config(object):
         self.pretrain_lr = 1e-4
         self.depth = 12
         self.pretrain_batch_size = 256
-        self.trial_shuffle = True  # do trial or batch shuffle
+        self.shuffle_function = 'trial'  # do trial, batch or random shuffle
         self.verbose = True
         self.n_epochs = 100
         self.masks = ['all_true', 'all_true', 'continuous', 'continuous']  # patient, trial, sample, observation
-        self.factors = [0.25, 0.25, 0.35, 0.15]  # patient, trial, sample, observation
+        self.factors = [0.1, 0.7, 0.1, 0.1]  # patient, trial, sample, observation
+
+        # model and logging saved directory
+        self.working_directory = 'test_run/models/' + self.dataset + '/' + '_'.join([str(factor) for factor in self.factors]) + '/'
+        self.logging_directory = 'test_run/logs/' + self.dataset + '/' + '_'.join([str(factor) for factor in self.factors]) + '/'
 
         # finetune configs
         self.num_classes = 2
@@ -27,12 +31,6 @@ class Config(object):
         self.finetune_batch_size_100 = 128
         self.finetune_epochs_100 = 50
         self.finetune_lr_100 = 1e-4
-
-        # 30% label
-        self.fraction_30 = 0.3
-        self.finetune_batch_size_30 = 128
-        self.finetune_epochs_30 = 50
-        self.finetune_lr_30 = 1e-4
 
         # 10% label
         self.fraction_10 = 0.1

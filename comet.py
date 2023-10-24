@@ -62,6 +62,8 @@ class COMET:
         self.net = torch.optim.swa_utils.AveragedModel(self._net)
         self.net.update_parameters(self._net)
 
+        # print(sum(p.numel() for p in self.net.parameters() if p.requires_grad))
+
         # projection head append after encoder
         self.proj_head = ProjectionHead(input_dims=self.output_dims, output_dims=2, hidden_dims=128).to(self.device)
         
@@ -74,13 +76,13 @@ class COMET:
         # self.finetune_n_epochs = 0
         # self.finetune_n_iters = 0
     
-    def fit(self, X, y, trial_shuffle=True, masks=None, factors=None, n_epochs=None, n_iters=None, verbose=True):
+    def fit(self, X, y, shuffle_function='trial', masks=None, factors=None, n_epochs=None, n_iters=None, verbose=True):
         """ Training the COMET model.
         
         Args:
             X (numpy.ndarray): The training data. It should have a shape of (n_samples, sample_timestamps, features).
             y (numpy.ndarray): The training labels. It should have a shape of (n_samples, 3). The three columns are the label, patient id, and trial id.
-            trial_shuffle (bool): To do trial or batch shuffle before training.
+            shuffle_function (str): specify the shuffle function.
             masks (list): A list of masking functions applied (str). [Patient, Trial, Sample, Observation].
             factors (list): A list of loss factors. [Patient, Trial, Sample, Observation].
             n_epochs (Union[int, NoneType]): The number of epochs. When this reaches, the training stops.
@@ -92,9 +94,9 @@ class COMET:
             epoch_f1_list: a list containing the linear evaluation on validation f1 score on each epoch.
         """
         assert X.ndim == 3
+        assert y.shape[1] == 3
         # Important!!! Shuffle the training set for contrastive learning pretraining. Check details in utils.py.
-        X, y = shuffle_feature_label(X, y, trial_shuffle=trial_shuffle, batch_size=self.batch_size)
-        # X, y = sklearn.utils.shuffle(X, y, random_state=42)
+        X, y = shuffle_feature_label(X, y, shuffle_function=shuffle_function, batch_size=self.batch_size)
 
         if n_iters is None and n_epochs is None:
             n_iters = 200 if X.size <= 100000 else 600  # default param for n_iters
@@ -219,7 +221,7 @@ class COMET:
 
         """
         out = self.net(x, mask)
-        # representation shape: B x T x Co ---> B x 1 x Co ---> B x Co
+        # representation shape: B x O x Co ---> B x 1 x Co ---> B x Co
         out = F.max_pool1d(
             out.transpose(1, 2),
             kernel_size=out.size(1),

@@ -5,6 +5,7 @@ import numpy as np
 
 
 def contrastive_loss(z1, z2, loss_func, id=None, hierarchical=False, factor=1.0):
+    # turn off that level if factor is 0
     if factor == 0:
         return 0
 
@@ -38,11 +39,11 @@ def sample_contrastive_loss(z1, z2):
     B, T = z1.size(0), z1.size(1)
     if B == 1:
         return z1.new_tensor(0.)
-    z = torch.cat([z1, z2], dim=0)  # 2B x T x C
-    z = z.transpose(0, 1)  # T x 2B x C
-    sim = torch.matmul(z, z.transpose(1, 2))  # T x 2B x 2B
-    logits = torch.tril(sim, diagonal=-1)[:, :, :-1]    # T x 2B x (2B-1), left-down side, remove last zero column
-    logits += torch.triu(sim, diagonal=1)[:, :, 1:]  # T x 2B x (2B-1), right-up side, remove first zero column
+    z = torch.cat([z1, z2], dim=0)  # 2B x O x C
+    z = z.transpose(0, 1)  # O x 2B x C
+    sim = torch.matmul(z, z.transpose(1, 2))  # O x 2B x 2B
+    logits = torch.tril(sim, diagonal=-1)[:, :, :-1]    # O x 2B x (2B-1), left-down side, remove last zero column
+    logits += torch.triu(sim, diagonal=1)[:, :, 1:]  # O x 2B x (2B-1), right-up side, remove first zero column
     logits = -F.log_softmax(logits, dim=-1)  # log softmax do dividing and log
     
     i = torch.arange(B, device=z1.device)
@@ -94,7 +95,7 @@ def id_contrastive_loss(z1, z2, id):
     loss = 0
     z1 = torch.nn.functional.normalize(z1, dim=1)
     z2 = torch.nn.functional.normalize(z2, dim=1)
-    # B x T x C -> B x C x T -> B x (C x T)
+    # B x O x C -> B x C x O -> B x (C x O)
     view1_array = z1.permute(0, 2, 1).reshape((B, -1))
     view2_array = z2.permute(0, 2, 1).reshape((B, -1))
     norm1_vector = view1_array.norm(dim=1).unsqueeze(0)
@@ -110,11 +111,11 @@ def id_contrastive_loss(z1, z2, id):
     triu_sum = torch.sum(sim_matrix_exp, 1)  # add column
     tril_sum = torch.sum(sim_matrix_exp, 0)  # add row
 
-    # loss_diag1 = -torch.mean(torch.log(diag_elements/triu_sum))
-    # loss_diag2 = -torch.mean(torch.log(diag_elements/tril_sum))
+    """loss_diag1 = -torch.mean(torch.log(diag_elements/triu_sum))
+    loss_diag2 = -torch.mean(torch.log(diag_elements/tril_sum))
 
-    # loss = loss_diag1 + loss_diag2
-    # loss_terms = 2
+    loss = loss_diag1 + loss_diag2
+    loss_terms = 2"""
     loss_terms = 0
 
     # upper triangle same patient combs exist

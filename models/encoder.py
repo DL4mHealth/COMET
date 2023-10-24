@@ -57,7 +57,10 @@ class ProjectionHead(nn.Module):
 
     def forward(self, x):
         x = self.repr_dropout(self.proj_head(x))
-        return torch.sigmoid(x)
+        if self.output_dims == 2:  # binary or multi-class
+            return torch.sigmoid(x)
+        else:
+            return x
 
 
 class FTClassifier(nn.Module):
@@ -79,14 +82,17 @@ class FTClassifier(nn.Module):
         )
 
     def forward(self, x):
-        out = self.net(x)  # B x T x Co
+        out = self.net(x)  # B x O x Co
         out = F.max_pool1d(
             out.transpose(1, 2),
             kernel_size=out.size(1),
         ).transpose(1, 2)  # B x 1 x Co
         out = out.squeeze(1)  # B x Co
         x = self.proj_head(out)  # B x Cp
-        return torch.sigmoid(x)
+        if self.p_output_dims == 2:  # binary or multi-class
+            return torch.sigmoid(x)
+        else:
+            return x
 
 
 class TCNEncoder(nn.Module):
@@ -104,8 +110,8 @@ class TCNEncoder(nn.Module):
         )
         self.repr_dropout = nn.Dropout(p=0.1)
         
-    def forward(self, x, mask=None):  # input dimension : B x T x Ci
-        x = self.input_fc(x)  # B x T x Ch (hidden_dims)
+    def forward(self, x, mask=None):  # input dimension : B x O x Ci
+        x = self.input_fc(x)  # B x O x Ch (hidden_dims)
         
         # generate & apply mask, default is binomial
         if mask is None:
@@ -130,15 +136,17 @@ class TCNEncoder(nn.Module):
         elif mask == 'mask_last':
             mask = x.new_full((x.size(0), x.size(1)), True, dtype=torch.bool)
             mask[:, -1] = False
+        else:
+            raise ValueError(f'\'{mask}\' is a wrong argument for mask function!')
 
         # mask &= nan_masK
         # ~ works as operator.invert
         x[~mask] = 0
 
         # conv encoder
-        x = x.transpose(1, 2)  # B x Ch x T
-        x = self.repr_dropout(self.feature_extractor(x))  # B x Co x T
-        x = x.transpose(1, 2)  # B x T x Co
+        x = x.transpose(1, 2)  # B x Ch x O
+        x = self.repr_dropout(self.feature_extractor(x))  # B x Co x O
+        x = x.transpose(1, 2)  # B x O x Co
         
         return x
         

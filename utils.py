@@ -43,7 +43,7 @@ def stop_logging():
 class MyBatchSampler(BatchSampler):
     """ A custom BatchSampler to shuffle the samples within each batch.
         It changes the local order of samples(samples in the same batch) per epoch,
-        which does not break too much the distribution of pre-shuffle samples by function shuffle_feature_label().
+        which does not break too much the distribution of pre-shuffled samples by function shuffle_feature_label().
         The goal is to shuffle the samples per epoch but make sure that there are samples from the same trial in a batch.
 
     """
@@ -63,23 +63,31 @@ class MyBatchSampler(BatchSampler):
             yield batch
 
 
-def shuffle_feature_label(X, y, trial_shuffle=True, batch_size=128):
+def shuffle_feature_label(X, y, shuffle_function='trial', batch_size=128):
     """ Call shuffle functions.
         The goal is to guarantee that there are samples from the same trial in a batch,
         while avoiding all the samples are from the same trial/patient (low diversity).
 
     Args:
-        trial_shuffle (bool): to do trial or batch shuffle
+        shuffle_function (str): specify the shuffle function
         batch_size (int): batch_size if apply batch shuffle
     """
 
     # do trial shuffle
-    if trial_shuffle:
+    if shuffle_function == 'trial':
         return trial_shuffle_feature_label(X, y)
 
     # do batch shuffle
-    else:
+    elif shuffle_function == 'batch':
         return batch_shuffle_feature_label(X, y, batch_size)
+
+    # do random shuffle
+    elif shuffle_function == 'random':
+        return shuffle(X, y, random_state=42)
+
+    else:
+        # print(shuffle_function)
+        raise ValueError(f'\'{shuffle_function}\' is a wrong argument for shuffle function!')
 
 
 def trial_shuffle_feature_label(X, y):
