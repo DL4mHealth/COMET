@@ -35,7 +35,7 @@ Capturing data consistency is crucial in the development of a contrastive learni
 
 
 ### Processed data 
-To get the processed dataset, run notebooks in the folder `data_processing/` for each raw dataset. The folder for processed datasets has two directories: `Feature/` and `Label/`. The folder `Feature/` contains files named in the format `feature_ID.npy` files for all the patients. Each`feature_ID.npy` file contains trials belonging to the same patient and stacked into a 3-D array with shape [N, T, D], where N denotes # of trials, T denotes the timestamps for a trial, and C denotes the feature dimensions.   
+Download the raw data from the links above and run notebooks in the folder `data_processing/` for each raw dataset to get the processed dataset. The folder for processed datasets has two directories: `Feature/` and `Label/`. The folder `Feature/` contains files named in the format `feature_ID.npy` files for all the patients. Each`feature_ID.npy` file contains trials belonging to the same patient and stacked into a 3-D array with shape [N, T, D], where N denotes # of trials, T denotes the timestamps for a trial, and C denotes the feature dimensions.   
 The folder `Label/` has a file with the name `label.npy`. This label file is a 2-D array with shape [N, 2], where N also denotes the # of patients. The first column is the label, and the second column is the patient ID, ranging from 1 to N. The processed data should be put into `datasets/DATA_NAME/` so that each patient file can be located by `datasets/DATA_NAME/Feature/feature_ID.npy`, and the label file can be located by `datasets/DATA_NAME/Label/label.npy`.  
   
 
