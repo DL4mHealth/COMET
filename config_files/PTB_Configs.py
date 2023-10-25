@@ -11,7 +11,7 @@ class Config(object):
         self.input_dims = 15
         self.output_dims = 320
         self.pretrain_lr = 1e-4
-        self.depth = 12
+        self.depth = 10
         self.pretrain_batch_size = 256
         self.shuffle_function = 'trial'  # do trial, batch or random shuffle
         self.verbose = True
