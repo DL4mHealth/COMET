@@ -103,9 +103,13 @@ class COMET:
 
         # we need patient id for patient-level contrasting and trial id for trial-level contrasting
         train_dataset = TensorDataset(torch.from_numpy(X).to(torch.float), torch.from_numpy(y).to(torch.float))
-        # Important!!! A customized batch_sampler to shuffle samples before each epoch. Check details in utils.py.
-        my_sampler = MyBatchSampler(range(len(train_dataset)), batch_size=min(self.batch_size, len(train_dataset)), drop_last=False)
-        train_loader = DataLoader(train_dataset, batch_sampler=my_sampler)
+        if shuffle_function == 'random':
+            train_loader = DataLoader(train_dataset, batch_size=min(self.batch_size, len(train_dataset)), shuffle=True,
+                                      drop_last=False)
+        else:
+            # Important!!! A customized batch_sampler to shuffle samples before each epoch. Check details in utils.py.
+            my_sampler = MyBatchSampler(range(len(train_dataset)), batch_size=min(self.batch_size, len(train_dataset)), drop_last=False)
+            train_loader = DataLoader(train_dataset, batch_sampler=my_sampler)
         
         optimizer = torch.optim.AdamW(self._net.parameters(), lr=self.lr)
         
