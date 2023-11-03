@@ -157,7 +157,7 @@ class COMET:
                 # print(out1.shape)
 
                 if factors is None:
-                    factors = [1.0, 1.0, 1.0, 1.0]
+                    factors = [0.25, 0.25, 0.25, 0.25]
                 # loss calculation
                 patient_loss = contrastive_loss(
                     patient_out1,
