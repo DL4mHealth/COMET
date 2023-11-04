@@ -143,52 +143,68 @@ class COMET:
                 if masks is None:
                     masks = ['all_true', 'all_true', 'continuous', 'continuous']
 
-                patient_out1 = self._net(x, mask=masks[0])
-                patient_out2 = self._net(x, mask=masks[0])
-
-                trial_out1 = self._net(x, mask=masks[1])
-                trial_out2 = self._net(x, mask=masks[1])
-
-                sample_out1 = self._net(x, mask=masks[2])
-                sample_out2 = self._net(x, mask=masks[2])
-
-                observation_out1 = self._net(x, mask=masks[3])
-                observation_out2 = self._net(x, mask=masks[3])
-                # print(out1.shape)
-
                 if factors is None:
                     factors = [0.25, 0.25, 0.25, 0.25]
-                # loss calculation
-                patient_loss = contrastive_loss(
-                    patient_out1,
-                    patient_out2,
-                    patient_contrastive_loss,
-                    id=pid,
-                    hierarchical=False,
-                    factor=factors[0],
-                )
-                trial_loss = contrastive_loss(
-                    trial_out1,
-                    trial_out2,
-                    trial_contrastive_loss,
-                    id=tid,
-                    hierarchical=False,
-                    factor=factors[1],
-                )
-                sample_loss = contrastive_loss(
-                    sample_out1,
-                    sample_out2,
-                    sample_contrastive_loss,
-                    hierarchical=True,
-                    factor=factors[2],
-                )
-                observation_loss = contrastive_loss(
-                    observation_out1,
-                    observation_out2,
-                    observation_contrastive_loss,
-                    hierarchical=True,
-                    factor=factors[3],
-                )
+
+                if factors[0] != 0:
+                    # do augmentation and compute representation
+                    patient_out1 = self._net(x, mask=masks[0])
+                    patient_out2 = self._net(x, mask=masks[0])
+
+                    # loss calculation
+                    patient_loss = contrastive_loss(
+                        patient_out1,
+                        patient_out2,
+                        patient_contrastive_loss,
+                        id=pid,
+                        hierarchical=False,
+                        factor=factors[0],
+                    )
+                else:
+                    patient_loss = 0
+
+                if factors[1] != 0:
+                    trial_out1 = self._net(x, mask=masks[1])
+                    trial_out2 = self._net(x, mask=masks[1])
+
+                    trial_loss = contrastive_loss(
+                        trial_out1,
+                        trial_out2,
+                        trial_contrastive_loss,
+                        id=tid,
+                        hierarchical=False,
+                        factor=factors[1],
+                    )
+                else:
+                    trial_loss = 0
+
+                if factors[2] != 0:
+                    sample_out1 = self._net(x, mask=masks[2])
+                    sample_out2 = self._net(x, mask=masks[2])
+
+                    sample_loss = contrastive_loss(
+                        sample_out1,
+                        sample_out2,
+                        sample_contrastive_loss,
+                        hierarchical=True,
+                        factor=factors[2],
+                    )
+                else:
+                    sample_loss = 0
+
+                if factors[3] != 0:
+                    observation_out1 = self._net(x, mask=masks[3])
+                    observation_out2 = self._net(x, mask=masks[3])
+
+                    observation_loss = contrastive_loss(
+                        observation_out1,
+                        observation_out2,
+                        observation_contrastive_loss,
+                        hierarchical=True,
+                        factor=factors[3],
+                    )
+                else:
+                    observation_loss = 0
 
                 loss = patient_loss + trial_loss + sample_loss + observation_loss
 
