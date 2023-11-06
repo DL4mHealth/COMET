@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from torch import nn
 from torch.utils.data import TensorDataset, DataLoader
 import numpy as np
-from models import TCNEncoder, ProjectionHead
+from models import TSEncoder, ProjectionHead
 from models.losses import contrastive_loss
 from models.losses import sample_contrastive_loss, observation_contrastive_loss, patient_contrastive_loss, trial_contrastive_loss
 from utils import batch_shuffle_feature_label, trial_shuffle_feature_label, shuffle_feature_label
@@ -55,7 +55,7 @@ class COMET:
         self.output_dims = output_dims
         self.hidden_dims = hidden_dims
         
-        self._net = TCNEncoder(input_dims=input_dims, output_dims=output_dims, hidden_dims=hidden_dims, depth=depth).to(self.device)
+        self._net = TSEncoder(input_dims=input_dims, output_dims=output_dims, hidden_dims=hidden_dims, depth=depth).to(self.device)
         # stochastic weight averaging
         # https://pytorch.org/blog/pytorch-1.6-now-includes-stochastic-weight-averaging/
         # self.net = self._net

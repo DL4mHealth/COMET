@@ -71,7 +71,7 @@ class FTClassifier(nn.Module):
         self.hidden_dims = hidden_dims  # Ch
         self.p_hidden_dims = p_hidden_dims  # Cph
         self.p_output_dims = p_output_dims  # Cp
-        self._net = TCNEncoder(input_dims=input_dims, output_dims=output_dims, hidden_dims=hidden_dims, depth=depth)
+        self._net = TSEncoder(input_dims=input_dims, output_dims=output_dims, hidden_dims=hidden_dims, depth=depth)
         self.net = torch.optim.swa_utils.AveragedModel(self._net)
         self.net.update_parameters(self._net)
         # projection head for finetune
@@ -95,7 +95,7 @@ class FTClassifier(nn.Module):
             return x
 
 
-class TCNEncoder(nn.Module):
+class TSEncoder(nn.Module):
     def __init__(self, input_dims, output_dims, hidden_dims=64, depth=10, mask_mode='binomial'):
         super().__init__()
         self.input_dims = input_dims  # Ci
