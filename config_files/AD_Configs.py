@@ -15,6 +15,7 @@ class Config(object):
         self.pretrain_batch_size = 256
         self.shuffle_function = 'trial'  # do trial, batch or random shuffle
         self.verbose = True
+        self.flag_use_multi_gpu = True
         self.n_epochs = 100
         self.masks = ['all_true', 'all_true', 'continuous', 'continuous']  # patient, trial, sample, observation
         self.factors = [0.25, 0.25, 0.25, 0.25]  # patient, trial, sample, observation

@@ -15,9 +15,11 @@ class Config(object):
         self.pretrain_batch_size = 256
         self.shuffle_function = 'trial'  # do trial, batch or random shuffle
         self.verbose = True
+        self.flag_use_multi_gpu = True
         self.n_epochs = 100
         self.masks = ['all_true', 'all_true', 'continuous', 'continuous']  # patient, trial, sample, observation
-        self.factors = [0.1, 0.7, 0.1, 0.1]  # patient, trial, sample, observation
+        # self.factors = [0.25, 0.25, 0.35, 0.15]  # patient, trial, sample, observation
+        self.factors = [0.1, 0.7, 0.1, 0.1]
 
         # model and logging saved directory
         self.working_directory = 'test_run/models/' + self.dataset + '/' + '_'.join([str(factor) for factor in self.factors]) + '/'

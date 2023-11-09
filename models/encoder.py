@@ -64,7 +64,8 @@ class ProjectionHead(nn.Module):
 
 
 class FTClassifier(nn.Module):
-    def __init__(self, input_dims, output_dims, depth, p_output_dims, hidden_dims=64, p_hidden_dims=128):
+    def __init__(self, input_dims, output_dims, depth, p_output_dims, hidden_dims=64, p_hidden_dims=128,
+                 device='cuda', flag_use_multi_gpu=True):
         super().__init__()
         self.input_dims = input_dims  # Ci
         self.output_dims = output_dims  # Co
@@ -72,14 +73,19 @@ class FTClassifier(nn.Module):
         self.p_hidden_dims = p_hidden_dims  # Cph
         self.p_output_dims = p_output_dims  # Cp
         self._net = TSEncoder(input_dims=input_dims, output_dims=output_dims, hidden_dims=hidden_dims, depth=depth)
+        # projection head for finetune
+        self.proj_head = ProjectionHead(output_dims, p_output_dims, p_hidden_dims)
+        device = torch.device(device)
+        if device == torch.device('cuda') and flag_use_multi_gpu:
+            self._net = nn.DataParallel(self._net)
+            self.proj_head = nn.DataParallel(self.proj_head)
+        self._net.to(device)
+        self.proj_head.to(device)
+
+        # stochastic weight averaging, see link:
+        # https://pytorch.org/blog/pytorch-1.6-now-includes-stochastic-weight-averaging/
         self.net = torch.optim.swa_utils.AveragedModel(self._net)
         self.net.update_parameters(self._net)
-        # projection head for finetune
-        self.proj_head = ProjectionHead(
-            output_dims,
-            p_output_dims,
-            p_hidden_dims,
-        )
 
     def forward(self, x):
         out = self.net(x)  # B x O x Co

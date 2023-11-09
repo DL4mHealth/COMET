@@ -24,11 +24,10 @@ class COMET:
         depth=10,
         device='cuda',
         lr=0.001,
-        # trial_batch_size=15,
         batch_size=128,
-        # temporal_unit=0,
         after_iter_callback=None,
-        after_epoch_callback=None
+        after_epoch_callback=None,
+        flag_use_multi_gpu=True
     ):
         """ Initialize a COMET model.
         
@@ -37,44 +36,44 @@ class COMET:
             output_dims (int): The representation dimension.
             hidden_dims (int): The hidden dimension of the encoder.
             depth (int): The number of hidden residual blocks in the encoder.
-            device (int): The gpu used for training and inference.
+            device (str): The gpu used for training and inference.
             lr (float): The learning rate.
             batch_size (int): The batch size of samples.
             after_iter_callback (Union[Callable, NoneType]): A callback function that would be called after each iteration.
             after_epoch_callback (Union[Callable, NoneType]): A callback function that would be called after each epoch.
+            flag_use_multi_gpu (bool): A flag to indicate whether using multiple gpus
         """
         
         super().__init__()
         self.device = device
         self.lr = lr
-        # self.trial_batch_size = trial_batch_size
         self.batch_size = batch_size
-        # self.max_train_length = max_train_length
-        # self.temporal_unit = temporal_unit
 
         self.output_dims = output_dims
         self.hidden_dims = hidden_dims
-        
-        self._net = TSEncoder(input_dims=input_dims, output_dims=output_dims, hidden_dims=hidden_dims, depth=depth).to(self.device)
+
+        self.flag_use_multi_gpu = flag_use_multi_gpu
+        # gpu_idx_list = [0, 1]
+        self._net = TSEncoder(input_dims=input_dims, output_dims=output_dims, hidden_dims=hidden_dims, depth=depth)
+        device = torch.device(device)
+        if device == torch.device('cuda') and self.flag_use_multi_gpu:
+            # self._net = nn.DataParallel(self._net, device_ids=gpu_idx_list)
+            self._net = nn.DataParallel(self._net)
+        self._net.to(device)
         # stochastic weight averaging
         # https://pytorch.org/blog/pytorch-1.6-now-includes-stochastic-weight-averaging/
         # self.net = self._net
         self.net = torch.optim.swa_utils.AveragedModel(self._net)
         self.net.update_parameters(self._net)
 
-        # print(sum(p.numel() for p in self.net.parameters() if p.requires_grad))
-
         # projection head append after encoder
-        self.proj_head = ProjectionHead(input_dims=self.output_dims, output_dims=2, hidden_dims=128).to(self.device)
+        # self.proj_head = ProjectionHead(input_dims=self.output_dims, output_dims=2, hidden_dims=128).to(self.device)
         
         self.after_iter_callback = after_iter_callback
         self.after_epoch_callback = after_epoch_callback
         
         self.n_epochs = 1
         self.n_iters = 1
-
-        # self.finetune_n_epochs = 0
-        # self.finetune_n_iters = 0
     
     def fit(self, X, y, shuffle_function='trial', masks=None, factors=None, n_epochs=None, n_iters=None, verbose=True):
         """ Training the COMET model.
