@@ -5,7 +5,8 @@ import torch.nn.functional as F
 import sklearn
 
 
-def finetune_fit(model, X_train, y_train, X_test, y_test, batch_size=128, finetune_epochs=50, num_classes=2, finetune_lr=0.0001, fraction=None, device=None, callback=None):
+def finetune_fit(model, X_train, y_train, X_test, y_test, batch_size=128, finetune_epochs=50, num_classes=2,
+                 finetune_lr=0.0001, fraction=None, device='cuda', callback=None):
     """ finetune the whole model including encoder and classifier.
 
     Args:
@@ -19,7 +20,7 @@ def finetune_fit(model, X_train, y_train, X_test, y_test, batch_size=128, finetu
         finetune_lr (float): The learning rate for fine-tuning.
         batch_size (Union[int, NoneType]): The batch size used for inference. If not specified, this would be the same batch size as training.
         fraction (Union[float, NoneType]): The fraction of training data. It used to do semi-supervised learning.
-        device (Union[int, NoneType]): The gpu used for training and inference.
+        device (str): The gpu used for training and inference.
         callback (Union[func, NoneType]): A callback function that would be called after each epoch.
 
     Returns:
@@ -32,14 +33,14 @@ def finetune_fit(model, X_train, y_train, X_test, y_test, batch_size=128, finetu
         y_train = y_train[:int(y_train.shape[0] * fraction)]
 
     assert X_train.ndim == 3
-    if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(device)
 
     model.train()
 
     # (n_samples,) is mapped to a target of shape (n_samples, n_classes).
     train_dataset = TensorDataset(torch.from_numpy(X_train).to(torch.float),
-                                  F.one_hot(torch.from_numpy(y_train).to(torch.long), num_classes=num_classes).to(torch.float))
+                                  F.one_hot(torch.from_numpy(y_train).to(torch.long),
+                                            num_classes=num_classes).to(torch.float))
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=finetune_lr)
@@ -67,7 +68,7 @@ def finetune_fit(model, X_train, y_train, X_test, y_test, batch_size=128, finetu
         print(f"Loss: {epoch_loss_list[-1]}")
         # print(f"Accuracy: {accuracy}")
         # No mask when testing
-        f1 = finetune_predict(model, X_test, y_test, batch_size=batch_size, num_classes=num_classes, device=device)
+        f1 = finetune_predict(model, X_test, y_test, batch_size=batch_size, num_classes=num_classes, device=str(device))
         epoch_f1_list.append(f1)
         callback(model, f1, fraction)
 
@@ -76,7 +77,7 @@ def finetune_fit(model, X_train, y_train, X_test, y_test, batch_size=128, finetu
     return epoch_loss_list, epoch_f1_list
 
 
-def finetune_predict(model, X_test, y_test, batch_size=128, num_classes=2, device=None):
+def finetune_predict(model, X_test, y_test, batch_size=128, num_classes=2, device='cuda'):
     """ test the fine-tuned model
 
     Args:
@@ -85,13 +86,13 @@ def finetune_predict(model, X_test, y_test, batch_size=128, num_classes=2, devic
         y_test (numpy.ndarray): This should have a shape of (n_samples,).
         batch_size (Union[int, NoneType]): The batch size used for inference. If not specified, this would be the same batch size as training.
         num_classes (int): The number of label classes.
-        device (Union[int, NoneType]): The gpu used for training and inference.
+        device (str): The gpu used for training and inference.
 
     Returns:
         repr: f1 score
     """
-    if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(device)
+
     test_dataset = TensorDataset(torch.from_numpy(X_test).to(torch.float),
                                  F.one_hot(torch.from_numpy(y_test).to(torch.long), num_classes=num_classes).to(torch.float))
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
