@@ -40,7 +40,12 @@ Download the raw data from the links above and run notebooks in the folder `data
 The folder `Label/` has a file with the name `label.npy`. This label file is a 2-D array with shape [N, 2], where N also denotes the # of patients. The first column is the label, and the second column is the patient ID, ranging from 1 to N.  
 
 The processed data should be put into `datasets/DATA_NAME/` so that each patient file can be located by `datasets/DATA_NAME/Feature/feature_ID.npy`, and the label file can be located by `datasets/DATA_NAME/Label/label.npy`.  
-  
+
+The processed datasets can be manually downloaded at the following links.
+* AD dataset: https://figshare.com/ndownloader/files/43196127 
+* PTB dataset: https://figshare.com/ndownloader/files/43196133 
+
+Since TDBrain is not a public dataset, we do not provide a download link here. The users need to request permission to download on the TDBrain official website and process the raw data.
 
 ## Experimental setups
 
